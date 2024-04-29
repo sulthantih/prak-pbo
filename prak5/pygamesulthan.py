@@ -1,105 +1,116 @@
-import pygame
+import tkinter as tk
 import random
+import time
 
+# Constants
+WIDTH = 500
+HEIGHT = 500
+DELAY = 100
+BLOCK_SIZE = 20
 
-pygame.init()
+# Snake class
+class Snake:
+    def __init__(self):
+        self.segments = [(100, 100), (80, 100), (60, 100)]
+        self.direction = "Right"
 
+    def move(self):
+        head_x, head_y = self.segments[0]
+        if self.direction == "Right":
+            new_head = (head_x + BLOCK_SIZE, head_y)
+        elif self.direction == "Left":
+            new_head = (head_x - BLOCK_SIZE, head_y)
+        elif self.direction == "Up":
+            new_head = (head_x, head_y - BLOCK_SIZE)
+        elif self.direction == "Down":
+            new_head = (head_x, head_y + BLOCK_SIZE)
+        self.segments = [new_head] + self.segments[:-1]
 
-lebar_layar = 800
-tinggi_layar = 600
+    def change_direction(self, direction):
+        if direction == "Right" and self.direction != "Left":
+            self.direction = direction
+        elif direction == "Left" and self.direction != "Right":
+            self.direction = direction
+        elif direction == "Up" and self.direction != "Down":
+            self.direction = direction
+        elif direction == "Down" and self.direction != "Up":
+            self.direction = direction
 
+    def grow(self):
+        self.segments.append(self.segments[-1])
 
-layar = pygame.display.set_mode((lebar_layar, tinggi_layar))
-pygame.display.set_caption("Game Ular")
+    def draw(self, canvas):
+        for segment in self.segments:
+            x, y = segment
+            canvas.create_rectangle(x, y, x + BLOCK_SIZE, y + BLOCK_SIZE, fill="green")
 
-gambar_ular = pygame.image.load("ular.png")
-gambar_makanan = pygame.image.load("makanan.png")
+# Food class
+class Food:
+    def __init__(self):
+        self.position = (0, 0)
+        self.spawn_food()
 
+    def spawn_food(self):
+        x = random.randint(0, (WIDTH - BLOCK_SIZE) // BLOCK_SIZE) * BLOCK_SIZE
+        y = random.randint(0, (HEIGHT - BLOCK_SIZE) // BLOCK_SIZE) * BLOCK_SIZE
+        self.position = (x, y)
 
-ukuran_gambar_asli = gambar_ular.get_size()
-ukuran_gambar_baru = (ukuran_gambar_asli[0] * 0.1, ukuran_gambar_asli[1] * 0.1)
+    def draw(self, canvas):
+        x, y = self.position
+        canvas.create_oval(x, y, x + BLOCK_SIZE, y + BLOCK_SIZE, fill="red")
 
-gambar_ular = pygame.transform.scale(gambar_ular, ukuran_gambar_baru)
-gambar_makanan = pygame.transform.scale(gambar_makanan, ukuran_gambar_baru)
+# Game class
+class Game:
+    def __init__(self, master):
+        self.master = master
+        self.canvas = tk.Canvas(master, width=WIDTH, height=HEIGHT)
+        self.canvas.pack()
+        self.snake = Snake()
+        self.food = Food()
+        self.score = 0
+        self.score_label = tk.Label(master, text=f"Score: {self.score}")
+        self.score_label.pack()
+        self.is_game_over = False
+        self.bind_keys()
+        self.update()
 
+    def bind_keys(self):
+        self.master.bind("<KeyPress-Up>", lambda event: self.snake.change_direction("Up"))
+        self.master.bind("<KeyPress-Down>", lambda event: self.snake.change_direction("Down"))
+        self.master.bind("<KeyPress-Left>", lambda event: self.snake.change_direction("Left"))
+        self.master.bind("<KeyPress-Right>", lambda event: self.snake.change_direction("Right"))
 
-x_ular = lebar_layar // 2
-y_ular = tinggi_layar // 2
+    def update(self):
+        if not self.is_game_over:
+            self.canvas.delete("all")
+            self.snake.move()
+            self.check_collision()
+            self.snake.draw(self.canvas)
+            self.food.draw(self.canvas)
+            self.score_label.config(text=f"Score: {self.score}")
+            self.master.after(DELAY, self.update)
 
+    def check_collision(self):
+        head = self.snake.segments[0]
+        if head in self.snake.segments[1:]:
+            self.game_over()
+        if head[0] < 0 or head[0] >= WIDTH or head[1] < 0 or head[1] >= HEIGHT:
+            self.game_over()
+        if head == self.food.position:
+            self.snake.grow()
+            self.food.spawn_food()
+            self.score += 1
 
-ukuran_ular = 10
+    def game_over(self):
+        self.is_game_over = True
+        self.canvas.create_text(WIDTH / 2, HEIGHT / 2, text="Game Over", font=("Helvetica", 24))
 
+# Main function
+def main():
+    root = tk.Tk()
+    root.title("Snake Game")
+    game = Game(root)
+    root.mainloop()
 
-panjang_ular = 5
-
-
-x_makanan = random.randint(0, lebar_layar - gambar_makanan.get_width())
-y_makanan = random.randint(0, tinggi_layar - gambar_makanan.get_height())
-
-
-kecepatan_ular = 10
-
-
-arah_ular = "ATAS"
-
-
-skor = 0
-
-
-font = pygame.font.Font(None, 36)
-
-
-berjalan = True
-while berjalan:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            berjalan = False
-
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT and arah_ular != "KANAN":
-                arah_ular = "KIRI"
-            if event.key == pygame.K_RIGHT and arah_ular != "KIRI":
-                arah_ular = "KANAN"
-            if event.key == pygame.K_UP and arah_ular != "BAWAH":
-                arah_ular = "ATAS"
-            if event.key == pygame.K_DOWN and arah_ular != "ATAS":
-                arah_ular = "BAWAH"
-
-    if arah_ular == "ATAS":
-        y_ular -= kecepatan_ular
-    if arah_ular == "BAWAH":
-        y_ular += kecepatan_ular
-    if arah_ular == "KIRI":
-        x_ular -= kecepatan_ular
-    if arah_ular == "KANAN":
-        x_ular += kecepatan_ular
-
-    if x_ular < 0 or x_ular > lebar_layar - gambar_ular.get_width():
-        berjalan = False
-    if y_ular < 0 or y_ular > tinggi_layar - gambar_ular.get_height():
-        berjalan = False
-
-    if x_ular + ukuran_ular > x_makanan and x_ular < x_makanan + gambar_makanan.get_width() \
-       and y_ular + ukuran_ular > y_makanan and y_ular < y_makanan + gambar_makanan.get_height():
-        skor += 1
-        panjang_ular += 1
-        x_makanan = random.randint(0, lebar_layar - gambar_makanan.get_width())
-        y_makanan = random.randint(0, tinggi_layar - gambar_makanan.get_height())
-
-    layar.fill((0, 0, 0))
-
-    for i in range(panjang_ular):
-        x_segmen = x_ular + (i * ukuran_ular)
-        layar.blit(gambar_ular, (x_segmen, y_ular))
-
-    layar.blit(gambar_makanan, (x_makanan, y_makanan))
-
-    teks_skor = font.render("Skor: " + str(skor), True, (255, 255, 255))
-    layar.blit(teks_skor, (10, 10))
-
-    pygame.display.update()
-
-    jam = pygame.time.Clock()
-    jam.tick(kecepatan_ular)
-
-pygame.quit()
+if __name__ == "__main__":
+    main()
